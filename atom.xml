@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Hexo</title>
+  
+  
+  <link href="http://www.yerha.top/atom.xml" rel="self"/>
+  
+  <link href="http://www.yerha.top/"/>
+  <updated>2024-03-10T13:53:59.119Z</updated>
+  <id>http://www.yerha.top/</id>
+  
+  <author>
+    <name>Yerha</name>
+    
+  </author>
+  
+  <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>使用GAS实现建造功能</title>
+    <link href="http://www.yerha.top/2024/03/10/Implement_Building_System_With_GAS/"/>
+    <id>http://www.yerha.top/2024/03/10/Implement_Building_System_With_GAS/</id>
+    <published>2024-03-10T13:38:48.000Z</published>
+    <updated>2024-03-10T13:53:59.119Z</updated>
+    
+    <content type="html"><![CDATA[<p><img src="/images/building_structures_with_gas.gif"></p>]]></content>
+    
+    
+      
+      
+    <summary type="html">&lt;p&gt;&lt;img src=&quot;/images/building_structures_with_gas.gif&quot;&gt;&lt;/p&gt;
+</summary>
+      
+    
+    
+    
+    
+    <category term="Unreal" scheme="http://www.yerha.top/tags/Unreal/"/>
+    
+    <category term="GAS" scheme="http://www.yerha.top/tags/GAS/"/>
+    
+    <category term="SurvivalCraft" scheme="http://www.yerha.top/tags/SurvivalCraft/"/>
+    
+  </entry>
+  
+</feed>
