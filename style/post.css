@@ -35,6 +35,10 @@
   border-radius: 4px;
   background: var(--third-bg-color);
 }
+.post-page .post-content p {
+  text-indent: 2em;
+  text-align: justify;
+}
 .post-page .post-content pre {
   padding: 0;
   background: transparent;
