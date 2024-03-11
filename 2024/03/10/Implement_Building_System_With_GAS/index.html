@@ -1,4 +1,4 @@
-<!DOCTYPE html><html class="appearance-dark" lang="zh-CN"><head><meta charset="UTF-8"><title>如何将建筑建造作为一种技能</title><meta name="description" content="致力于减少重复性工作"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
+<!DOCTYPE html><html class="appearance-auto" lang="zh-CN"><head><meta charset="UTF-8"><title>如何将建筑建造作为一种技能</title><meta name="description" content="致力于减少重复性工作"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
 <!-- Baidu Analytics --><!-- End Baidu Analytics --><link rel="icon" href="/images/favicon.ico"><link rel="stylesheet" href="/style/common/bulma.css"><link rel="stylesheet" href="/style/base.css"><link rel="stylesheet" href="/style/common/helper.css"><script src="/js/common.js"></script><link rel="stylesheet" href="/style/post.css"><link rel="stylesheet" href="/style/themes/highlight-theme-light.css"><link rel="stylesheet" href="/style/common/jquery.fancybox.min.css"><script src="/js/highlight.pack.js"></script><meta name="description" content="
 在很多提供建造玩法的项目案例中，往往是定义 ActorComponent 类并在那里实现启用建造功能、选择建造位置、轻微调整建筑物、生成建筑物等功能，随后角色类会使用该 ActorComponent 的实例，从而获得建造建筑的能力。这需要开发者处理玩家能否启用建造功能，例如当玩家获得阵亡、沉睡、眩晕等状态时需要阻止建筑功能逻辑的执行，并且停止正在进行的建造进程。
 除此之外，很多解决方案还采取了引入若干个碰撞频道来实现建筑物对齐功能，这会至少引发三个问题：1. 迁移代码到其他项目时总是需要添加这些额外的碰撞频道；2. 每次引入新的碰撞频道时，需要检查之前的建筑物是否已经忽略了新频道，避免出现错误的对齐；3. 开发者需要检查每个 BoxComponent 是否正确阻挡了对应的频道，增加了因开发者分心、遗忘所造.."><meta name="generator" content="Hexo 7.0.0">
@@ -15,7 +15,7 @@
 <h2 id="BoxComponent"><a href="#BoxComponent" class="headerlink" title="BoxComponent"></a>BoxComponent</h2><p>虚幻引擎定义的组件基本都支持基类来派生出新的类，BoxComponent 作为碰撞组件也常常在建造物类内被放置在不同位置处，提示其他建筑物可以对齐的位置处。下图是地基类建筑可以设置其他地基、墙壁可以对齐的位置演示。<br><img src="/images/demo_foundation_structure.png"></p>
 <p>对齐功能是在射线追踪碰到我们的 structure 类实例时，检查遇到的 BoxComponent 是否满足对齐的建筑物类型，如果是的话就将 BoxComponent 的变换作为预览建筑物的变换。应用 BoxComponent 的逻辑实现在下一节中，本节讨论如何为 BoxComponent 附上合适的建筑物类型，例如墙壁建筑物能找到指示墙壁对齐的 BoxComponent。</p>
 <p>我个人比较喜欢的是让每一个行为都有意义，包括为 BoxComponent 实例命名。在上面的图片中可以看到 FoundationX、WallX 格式的名字，这些数字（X）前面的字符串就为 BoxComponent 定义了类型。这样名字不仅帮助设计师区分不同组件，还进一步确定了它可以对齐的建筑物类型。为实现这种名称决定类型的功能，我们需要一个枚举类和 BoxComponent 派生类，具体实现如下：</p>
-<pre><code class="highlight C++"><span class="keyword">enum class</span> <span class="title class_">EStructureType</span> : uint8
+<pre><code class="highlight CPP"><span class="keyword">enum class</span> <span class="title class_">EStructureType</span> : uint8
 {
 	None,
 	Foundation,
