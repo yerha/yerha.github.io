@@ -31,9 +31,6 @@
   transform: translateY(0);
 }
 
-.post-page .post-content {
-  text-indent: 2em;
-}
 .post-page .post-content code {
   border-radius: 4px;
   background: var(--third-bg-color);
