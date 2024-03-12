@@ -1,4 +1,4 @@
-<!DOCTYPE html><html class="appearance-auto" lang="zh-CN"><head><meta charset="UTF-8"><title>如何将建造功能作为一种技能</title><meta name="description" content="致力于减少重复性工作"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
+<!DOCTYPE html><html class="appearance-dark" lang="zh-CN"><head><meta charset="UTF-8"><title>如何将建造功能作为一种技能</title><meta name="description" content="致力于减少重复性工作"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
 <!-- Baidu Analytics --><!-- End Baidu Analytics --><link rel="icon" href="/images/favicon.ico"><link rel="stylesheet" href="/style/common/bulma.css"><link rel="stylesheet" href="/style/base.css"><link rel="stylesheet" href="/style/common/helper.css"><script src="/js/common.js"></script><link rel="stylesheet" href="/style/post.css"><link rel="stylesheet" href="/style/themes/highlight-theme-light.css"><link rel="stylesheet" href="/style/common/jquery.fancybox.min.css"><script src="/js/highlight.pack.js"></script><meta name="description" content="(最终效果展示)
 
 
@@ -15,9 +15,9 @@
 <li>将建造功能作为一项 Ability 来实现，后期玩家获得的状态影响着玩家是否能够激活该技能；</li>
 <li>设计师只需要按照命名规范为 BoxComponent 起合适的名字，并调整对齐位置点即可。</li>
 </ul>
-<h2 id="建筑物的识别与对齐"><a href="#建筑物的识别与对齐" class="headerlink" title="建筑物的识别与对齐"></a>建筑物的识别与对齐</h2><p>在玩家尝试进行一次建造物的生成时，通常更愿意将其摆放在已存在建筑物的附近，因此为玩家提供辅助对齐的机制尤为重要。因此在建筑物类内部，可以看到很多 BoxComponent 出现在 StaticMeshComponent 的附近，用于指定各自位置处可以摆放的建筑类类型。在下图中，可以看到地基类建筑可以设置其他地基、墙壁可以对齐的位置。</p>
+<h2 id="建筑物的识别与对齐"><a href="#建筑物的识别与对齐" class="headerlink" title="建筑物的识别与对齐"></a>建筑物的识别与对齐</h2><p>在玩家尝试进行一次建造物的生成时，通常更愿意将其摆放在已存在建筑物的附近，因此为玩家提供辅助对齐的机制尤为重要。在建筑物类内部可以看到很多 BoxComponent 出现在 StaticMeshComponent 的附近，它们用于指定可以摆放在那里的建筑类类型。在下图中，可以看到地基类建筑可以设置其他地基、墙壁可以对齐的位置。</p>
 <p><img src="/images/demo_foundation_structure.png"></p>
-<p>在玩家挪动预览建筑物的位置时，射线追踪的结果会尝试寻找匹配的 BoxComponent ，如果建筑物类型匹配则设置预览建筑物的变换到该 BoxComponent 的。具体的逻辑实现在下一节中展开详述，本节讨论如何为 BoxComponent 附上合适的建筑物类型。</p>
+<p>在玩家挪动预览建筑物的位置时，射线追踪的结果会尝试寻找匹配的 BoxComponent，如果建筑物类型匹配则设置预览建筑物的变换到该 BoxComponent 的。具体的逻辑实现在下一节中展开详述，本节讨论如何为 BoxComponent 附上合适的建筑物类型。</p>
 <p>我个人比较喜欢的是让每一个行为都有意义，包括为 BoxComponent 实例命名。在上图左上角可以看到<code>FoundationX</code>、<code>WallX</code>格式的名字，这些数字（X）前面的字符串就为 BoxComponent 定义了类型。这样名字不仅帮助设计师区分不同组件，还进一步确定了它可以对齐的建筑物类型（如建筑物类型为 Wall 的实例只能对齐到 Wall 开头的 BoxComponent 中）。为实现这种名称决定类型的功能，我们需要一个枚举类和 BoxComponent 派生类，具体实现如下：</p>
 <pre><code class="hljs C++"><span class="hljs-keyword">enum class</span> <span class="hljs-title class_">EStructureType</span> : uint8
 {
@@ -43,10 +43,15 @@
 }
 </code></pre>
 <p>在上述代码中<code>EStructureType</code>决定了当前项目中有哪些建筑物类型。自定义的<code>UBota_BoxComponent</code>提供了返回建筑类型的函数，在函数体内会根据自己的名字找到匹配的建筑枚举项并返回。这种实现方式使用到了虚幻引擎提供的反射机制，设计师也可以随时在<code>EStructureType</code>添加新的建筑物类型，而无需修改<code>UBota_BoxComponent</code>的代码。</p>
-<p>在很多解决方案中，摧毁一个建筑物可能会引发其他建筑物的一同销毁，例如一块地基建筑物被销毁时会联通周围的墙壁、墙壁附近的物品一起销毁，但不会影响其他地基建筑物的销毁，此时可以遍历 <code>UBota_BoxComponent</code> 组件从而筛选出满足条件的建筑物。</p>
+<p>在很多解决方案中，摧毁一个建筑物可能会引发其他建筑物的一同销毁，例如一块地基建筑物被销毁时会连同周围的墙壁、墙壁附近的物品一起销毁，但不会影响其他地基建筑物的销毁，此时可以遍历 <code>UBota_BoxComponent</code> 组件从而筛选出满足条件的建筑物。</p>
 <h2 id="实现技能前的准备工作"><a href="#实现技能前的准备工作" class="headerlink" title="实现技能前的准备工作"></a>实现技能前的准备工作</h2><p>在 GAS 插件下，需要玩家挑选和确认施法位置时会用到继承自<code>AGameplayAbilityTargetActor</code>的类实例（以下简称 TargetActor）。除了作为一个 Actor 存在，它还封装了一个<code>FGameplayAbilityTargetData</code>（以下简称 TargetData），在玩家发出确认目标的请求时就会将处理后的信息封装成<code>FGameplayAbilityTargetDataHandle</code>（以下简称 TargetDataHandle）然后以委托的形式传递出去，这是一种在 Ability 类中客户端向服务器通信发送数据的方式。虚幻官方提供了如 GroundTace、SingleLineTrace 等派生类供开发者直接使用，这些派生类会在射线追踪中将<code>FGameplayAbilityTargetingLocationInfo</code>的实例传递出去，在一些仅需要位置信息的技能中很有用。</p>
-<p>然而对于建造技能来说，除了位置信息我们还需要知道玩家设置的旋转信息，以便于建筑物拥有玩家预期的变换。因此我们首先需要确保能能够传递位置和旋转信息（这里假设了缩放大小保持在 1），其次作为预览建筑物的 TargetActor 尝试寻找<code>UBota_BoxComponent</code>实例并对齐，最后一个是能在自定义的 TargetData 和 TargetDataHandle 之间来回转换。</p>
-<p>自定义 TargetData 中最关键的要求就是变量类型实现了网络序列化（有<code>NetSerialize</code>函数可用），在本案例中，<code>FVector_NetQuantize100</code>和<code>FRotator</code>都被虚幻引擎官方实现了网络序列化，因此整个工作流程就只是使用如同下面的模板来定义一个 TargetData：</p>
+<p>然而对于建造技能来说，除了位置信息我们还需要知道玩家设置的旋转信息，以便于建筑物拥有玩家预期的变换。因此我们：</p>
+<ol>
+<li>能够传递位置和旋转信息（这里假设了缩放大小保持在 1）；</li>
+<li>作为预览建筑物的 TargetActor 能尝试寻找<code>UBota_BoxComponent</code>实例并对齐；</li>
+<li>能在自定义的 TargetData 和 TargetDataHandle 之间来回转换。</li>
+</ol>
+<p>自定义 TargetData 中最关键的要求就是变量类型实现了网络序列化（有<code>NetSerialize</code>函数可用），在本案例中，<code>FVector_NetQuantize100</code>和<code>FRotator</code>都被虚幻引擎官方实现了网络序列化，故整个工作流程就只是使用如同下面的模板来定义一个 TargetData：</p>
 <pre><code class="hljs C++"><span class="hljs-built_in">USTRUCT</span>(BlueprintType)
 <span class="hljs-keyword">struct</span> <span class="hljs-title class_">BOTA_API</span> FGameplayAbilityTargetData_LocationAndRotation : <span class="hljs-keyword">public</span> FGameplayAbilityTargetData
 {
@@ -82,22 +87,18 @@
 	};
 };</code></pre>
 
-<p>TargetData 定义完成之后，接下来的任务就是定义 TargetActor，在这里负责创建预览建筑物网格，让玩家选择要将建筑物放置在哪里。TargetActor 有几个信息可以先了解一下（函数无签名信息）：</p>
+<p>接下来的任务就是定义 TargetActor，作为预览建筑物辅助玩家选择要将建筑物放置在哪里。TargetActor 有几个信息可以先了解一下（函数无签名信息）：</p>
 <ul>
-<li><code>StartTargeting()</code>：初始化函数，可以得到 Ability 的信息，进而获得 Avatar、AbilitySystemComponent 等信息。从而在<code>Tick()</code>函数中找到玩家的位置和看向的方向，确定射线追踪的参数。</li>
+<li><code>StartTargeting()</code>：初始化函数，可以得到 Ability 的信息，进而获得 Avatar、AbilitySystemComponent （以下简称 ASC）等信息。从而在<code>Tick()</code>函数中找到玩家的位置和看向的方向，确定射线追踪的参数。</li>
 <li><code>ConfirmTargetingAndContinue()</code>：玩家对 ASC 调用了 <code>TargetConfirm()</code> 函数，代表玩家此时决定在此处生成 TargetData。在本例中代表玩家已经确定了新建筑物要放置在哪里。</li>
-<li><code>IsConfirmTargetingAllowed()</code>：通常在上一条函数中调用，有时 TargetActor 所掌握的信息不能生成 TargetData，返回一个布尔值来信息是否满足条件。在本例中，墙壁类建筑物不允许随意放置，只允许放置在 UBota_BoxComponent 的类型是 Wall 之中，具体来说必须在地基之上，所以出现在其他地方时阻止玩家生成建筑物实例。</li>
+<li><code>IsConfirmTargetingAllowed()</code>：通常在上一条函数中调用，有时 TargetActor 所掌握的信息不能生成 TargetData，返回一个布尔值来信息是否满足条件。在本例中，墙壁类建筑物不允许随意放置，只允许放置在 UBota_BoxComponent 的类型是 Wall 之中，具体来说必须在地基或者其他墙壁之上，所以出现在其他地方时阻止玩家生成建筑物实例。</li>
 <li><code>StartLocation</code>：一个 FGameplayAbilityTargetingLocationInfo 类型的实例，包含一个位置信息可以广播。</li>
 </ul>
 <p>本例定义了一个派生自<code>AGameplayAbilityTargetActor_SingleLineTrace</code>的新类，重载了其<code>Tick()</code>、<code>ConfirmTargetingAndContinue()</code>和<code>IsConfirmTargetingAllowed()</code>函数。</p>
-<p>在 Tick 函数会展开射线追踪检测，得到 FHitResult 实例后判断 Component 是否为 Bota_BoxComponent，如果是就设置 TargetActor 为 Component 的变换，否则就使用射线检测的 TraceEnd 作为 TargetActor 的位置。由于基类假设的是玩家并不会移动，但我们希望玩家可以边移动边选择放置处，意味着需要更新<code>StartLocation</code>的信息：</p>
+<p>在 Tick 函数会展开射线追踪检测，得到 FHitResult 实例后判断 Component 是否为 Bota_BoxComponent，如果是就设置 TargetActor 为 Component 的变换，否则就使用射线检测的 TraceEnd 作为 TargetActor 的位置。由于基类假设的是玩家并不会移动，但我们希望玩家可以边移动边选择放置处，这意味着需要更新<code>StartLocation</code>的信息：</p>
 <pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ABota_PreviewTargetActor::Tick</span><span class="hljs-params">(<span class="hljs-type">float</span> DeltaSeconds)</span></span>
 <span class="hljs-function"></span>{
 	StartLocation.LiteralTransform.<span class="hljs-built_in">SetLocation</span>(SourceActor-&gt;<span class="hljs-built_in">GetActorLocation</span>());
-	<span class="hljs-keyword">if</span> (!SourceActor || SourceActor-&gt;<span class="hljs-built_in">GetLocalRole</span>() == ENetRole::ROLE_SimulatedProxy)
-	{
-		<span class="hljs-keyword">return</span>;
-	}
 	<span class="hljs-keyword">auto</span> HitResult = <span class="hljs-built_in">PerformTrace</span>(SourceActor);
 	BuildTransform.<span class="hljs-built_in">SetLocation</span>(HitResult.Component.<span class="hljs-built_in">IsValid</span>() ? HitResult.ImpactPoint : HitResult.TraceEnd);
 	bCanBuild = bFreePlacement;
@@ -112,7 +113,7 @@
 	}
 	<span class="hljs-built_in">SetActorTransform</span>(BuildTransform);
 }</code></pre>
-<p>在上述的实现中还没有考虑玩家输入的旋转信息，通常在建造游戏中玩家可以使用<code>Q</code> <code>E</code>或者鼠标滚轮来进行Yaw轴上旋转。为了实现这个功能，可以引入两个<code>GameplayTag</code>并在对应按键按下和释放时分别对<code>ASC</code>调用<code>AddLooseGameplayTag()</code>和<code>RemoveLooseGameplayTag()</code>，使得 TargetActor 和玩家之间通过标签来通信，具体实现是：</p>
+<p>通常在建造游戏中玩家可以使用<code>Q</code> <code>E</code>或者鼠标滚轮实现预览建筑物在 Yaw 轴上进行旋转，为了实现这个功能，可以引入两个<code>GameplayTag</code>并在对应按键按下和释放时分别对<code>ASC</code>调用<code>AddLooseGameplayTag()</code>和<code>RemoveLooseGameplayTag()</code>，使得 TargetActor 和玩家之间通过标签来通信，具体实现是：</p>
 <pre><code class="hljs C++"><span class="hljs-comment">// Bota_GameplayTags.cpp</span>
 <span class="hljs-built_in">UE_DEFINE_GAMEPLAY_TAG</span>(Tag_Input_Rotate_Up, <span class="hljs-string">"Input.Rotate.Up"</span>);
 <span class="hljs-built_in">UE_DEFINE_GAMEPLAY_TAG</span>(Tag_Input_Rotate_Down, <span class="hljs-string">"Input.Rotate.Down"</span>);
@@ -150,7 +151,7 @@
 		}
 		BuildTransform.<span class="hljs-built_in">SetRotation</span>(NewRotation.<span class="hljs-built_in">Quaternion</span>());
 	}
-	<span class="hljs-comment">// .. 与之前相同</span>
+	<span class="hljs-comment">// ... 与之前相同</span>
 }</code></pre>
 
 <p>接下来需要考虑实现如何将自定义的 TargetData 封装为 TargetDataHandle，并在<code>ConfirmTargetingAndContinue()</code> 中广播出去。下面的代码是比较模板化的代码，结构体实例也通常使用 C++ 的<code>new</code>关键字来创建实例并对实例的数据成员赋值，最后新定义一个 TargetDataHandle 并将刚才的实例添加进去并返回。</p>
@@ -175,7 +176,7 @@
 	}
 }</code></pre>
 
-<p>由于是自定义的 TargetData 所以并没有直接的方法来获得里面存储的位置和旋转信息，因此需要实现一个单独的函数来将 TargetDataHandle 里面存储的信息读取出来。这个函数可以是静态的，可以定义在 <code>GameplayAbility</code> 或者 <code>UBlueprintFunctionLibrary</code> 中，本例中实现在了 GA 下：</p>
+<p>在蓝图中，自定义的 TargetData 并没有直接的方法来获得里面存储的位置和旋转信息，因此需要实现一个单独的函数来将 TargetDataHandle 里面存储的自定义 TargetData 读取出来。这个函数可以是静态的，可以定义在 <code>UGameplayAbility</code> 或者 <code>UBlueprintFunctionLibrary</code> 中，本例中实现在了 GA 下：</p>
 <pre><code class="hljs C++"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">UBota_GameplayAbility::GetTransformFromTargetData</span><span class="hljs-params">(FGameplayAbilityTargetDataHandle Handle, <span class="hljs-type">const</span> <span class="hljs-type">int</span> Index, FTransform&amp; Transform)</span></span>
 <span class="hljs-function"></span>{
     FGameplayAbilityTargetData* Data = Handle.<span class="hljs-built_in">Get</span>(Index);
@@ -195,7 +196,7 @@
     }
 }</code></pre>
 
-<h2 id="实现技能逻辑"><a href="#实现技能逻辑" class="headerlink" title="实现技能逻辑"></a>实现技能逻辑</h2><p>在本例中将技能逻辑的实现放在了蓝图，这是因为预览建筑物类中设置了一些<code>Expose On Spawn</code> 的变量，我暂时在 C++ 中没有找到在技能任务执行之前，对这些变量初始化的办法。在蓝图中，我将技能作为由 <code>GameplayEvent</code> 触发并且约定<code>Optional Object</code>中存储着建筑类的信息。随后调用<code>WaitTargetData</code>任务并选择之前定义的预览建筑物 TargetActor 并设置好建筑物信息，在<code>Valid Data</code>执行中让服务器生成具体的 Actor 实例，进一步设置<code>Owner</code>为玩家，这样就可以在建筑物类中定义<code>RPC</code>并不会报没有网络链路的错误了，在本例中开关门的动作就是调用 Server 函数，随后 NetMulticast 执行开关门的动画。蓝图节点的总览如下：</p>
+<h2 id="实现技能逻辑"><a href="#实现技能逻辑" class="headerlink" title="实现技能逻辑"></a>实现技能逻辑</h2><p>在本例中将技能逻辑的实现放在了蓝图，这是因为预览建筑物类中设置了一些<code>Expose On Spawn</code> 的变量，我暂时在 C++ 中没有找到在技能任务执行之前，对这些变量初始化的办法。在蓝图中，我将技能的触发器设置为由 <code>GameplayEvent</code> 触发并且约定<code>Optional Object</code>中存储着建筑类的信息。随后调用<code>WaitTargetData</code>任务并选择之前定义的预览建筑物 TargetActor 并设置好建筑物信息，在<code>Valid Data</code>执行中让服务器生成具体的 Actor 实例，进一步设置<code>Owner</code>为玩家，这样就可以在建筑物类中定义<code>RPC</code>并不会报没有网络链路的错误了，在本例中开关门的动作就是调用 Server 函数，随后 NetMulticast 执行开关门的动画。蓝图节点的总览如下：</p>
 <p><img src="/images/ga_build_screenshot.png" alt="GA_Build"></p>
 <h2 id="触发技能的执行"><a href="#触发技能的执行" class="headerlink" title="触发技能的执行"></a>触发技能的执行</h2><p>在本例中，我使用一个 <code>class UBota_StructureDataAsset : public UPrimaryDataAsset</code> 来存储着建筑物的信息，有些如建筑物的名字、缩略图等信息定义在此处，而具体的网格资产和逻辑都是在 Actor 类中选择。在预览建筑物 TargetActor 中找到建筑物类的类默认对象，从而读取网格资产信息。这样就不用在<code>DataAsset</code>和建筑物类中设置两次网格资产等其他信息，减少重复性行为。</p>
 <pre><code class="hljs C++"><span class="hljs-comment">// Bota_PreviewTargetActor.cpp</span>
@@ -205,6 +206,6 @@ StructureType = DefaultStructureActor-&gt;StructureType;
 StaticMeshComponent-&gt;<span class="hljs-built_in">SetStaticMesh</span>(Mesh);
 bFreePlacement = DefaultStructureActor-&gt;bFreePlacement;</code></pre>
 
-<p>在<code>AssetManager</code>中添加<code>UBota_StructureDataAsset</code>后就可以使用 <code>Get Primary Asset Id List</code> 和 <code>Async Load Primary Asset List</code> 节点来加载所有建筑。选择了需要建造的建筑物后，就可以调用 <code>Send Gameplay Event To Actor</code>来触发技能的执行了。在本例中，约定了<code>UBota_StructureDataAsset</code>实例在通过<code>Optional Object</code>传递。</p>
+<p>在<code>AssetManager</code>中添加<code>UBota_StructureDataAsset</code>后就可以使用 <code>Get Primary Asset Id List</code> 和 <code>Async Load Primary Asset List</code> 节点来加载所有建筑物了。选择需要建造的建筑物后，就可以调用 <code>Send Gameplay Event To Actor</code>来触发技能的执行了。</p>
 <p><img src="/images/try_active_build_ability_by_tag.png"></p>
 </article><section class="jump-container is-flex is-justify-content-space-between my-6"><!-- em is empty placeholder--><em></em></section></div></div></main></main><footer class="is-flex is-flex-direction-column is-align-items-center is-flex-shrink-0 is-family-serif"><section class="sns-container"><!-- Github--><a title="github" target="_blank" rel="noopener nofollow" href="//github.com/yerha"><i class="iconfont icon-github"></i></a><!-- Ins--><!-- RSS--><!-- 知乎--><!-- 领英--><!-- 脸书--></section><p><span>Copyright ©</span><span> Yerha 2024</span></p><div class="is-flex is-justify-content-center is-flex-wrap-wrap"><p>Powered by Hexo &verbar;&nbsp;</p><p class="is-flex is-justify-content-center"><a title="Hexo theme author" target="_blank" rel="noopener" href="//github.com/haojen">Theme by Haojen&nbsp;</a></p><div style="margin-top: 2px"><a class="github-button" title="github-button" target="_blank" rel="noopener" href="https://github.com/haojen/hexo-theme-Claudia" data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true"></a></div></div><div><span></span></div></footer><script async defer src="https://buttons.github.io/buttons.js"></script><script src="/js/jquery-3.6.1.min.js"></script><script src="/js/jquery-fancybox.min.js"></script><script src="/js/img_zoom.js"></script><script src="/js/post.js"></script></body></html>
