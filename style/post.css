@@ -39,6 +39,9 @@
   text-indent: 2em;
   text-align: justify;
 }
+.post-page .post-content li {
+  margin-top: 8px;
+}
 .post-page .post-content pre {
   padding: 0;
   background: transparent;
