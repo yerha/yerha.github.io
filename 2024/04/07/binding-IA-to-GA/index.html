@@ -1,0 +1,164 @@
+<!DOCTYPE html><html class="appearance-dark" lang="zh-CN"><head><meta charset="UTF-8"><title>如何用 InputAction 来触发 GameplayAbility 的激活</title><meta name="description" content="致力于减少重复性工作"><meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, initial-scale=1"><!-- Google Analytics --><!-- End Google Analytics -->
+<!-- Baidu Analytics --><!-- End Baidu Analytics --><link rel="icon" href="/images/favicon.ico"><link rel="stylesheet" href="/style/common/bulma.css"><link rel="stylesheet" href="/style/base.css"><link rel="stylesheet" href="/style/common/helper.css"><script src="/js/common.js"></script><link rel="stylesheet" href="/style/post.css"><link rel="stylesheet" href="/style/themes/highlight-theme-light.css"><link rel="stylesheet" href="/style/common/jquery.fancybox.min.css"><script src="/js/highlight.pack.js"></script><meta name="description" content="GAS 作为管理技能和属性相关的灵活插件，使得开发制作角色扮演游戏、多人在线战术竞技游戏不再那么繁琐。另一方面，虚幻引擎将增强输入系统作为了默认输入组件，这不仅使得按下、按下并按住等常见功能逻辑作为了内置功能，还引入了上下文和优先级机制，使得我们可以将同一个按键在不同的上下文中发挥不同的效果。
+如果有机会通过增强输入系统中的输入动作映射到 GAS 的技能激活，那么就可以以很优雅的方式在不同上下文中激活不同的技能。例如鼠标左键在未装备武器时激活挥拳技能、装备枪械时变为开火技能；空格键可以先作为跳跃技能的触发按钮，后期又可以灵活地替换成翻滚技能的触发按钮。本博文将讨论以下几点内容：
+
+何时应该赋予角色技能，以及输入事件的绑定；
+如何保证所有技能任务都正确工作，尤其是等待输入 ID 按下和释放的技能任务；
+有些技.."><meta name="generator" content="Hexo 7.0.0"><link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
+
+<style>.github-emoji { position: relative; display: inline-block; width: 1.2em; min-height: 1.2em; overflow: hidden; vertical-align: top; color: transparent; }  .github-emoji > span { position: relative; z-index: 10; }  .github-emoji img, .github-emoji .fancybox { margin: 0 !important; padding: 0 !important; border: none !important; outline: none !important; text-decoration: none !important; user-select: none !important; cursor: auto !important; }  .github-emoji img { height: 1.2em !important; width: 1.2em !important; position: absolute !important; left: 50% !important; top: 50% !important; transform: translate(-50%, -50%) !important; user-select: none !important; cursor: auto !important; } .github-emoji-fallback { color: inherit; } .github-emoji-fallback img { opacity: 0 !important; }</style>
+</head><body class="is-flex is-flex-direction-column"><header class="header-widget is-flex-shrink-0 is-hidden-mobile"><div class="container is-fullhd is-flex is-justify-content-space-between is-align-items-center is-full-height"><section class="is-hidden-mobile is-flex-shrink-0"><h2><a href="/">Yerha's blog</a></h2></section><h3 class="is-hidden-mobile is-family-serif is-full-height is-flex is-align-items-center is-flex-shrink-0"><div class="is-full-height" id="postTopic"><p class="is-full-height is-flex-shrink-0 is-flex is-align-items-center is-justify-content-center">如何用 InputAction 来触发 GameplayAbility 的激活</p><p class="is-full-height is-flex-shrink-0 is-flex is-align-items-center is-justify-content-center">点击返回顶部</p></div></h3><aside class="is-flex-shrink-0"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></aside></div></header><header class="is-flex header-widget is-flex-shrink-0 is-align-items-center is-justify-content-center is-hidden-tablet"><h3 class="is-inline-block"><a href="/">首页</a></h3><h3 class="is-inline-block"><a href="/archives">归档</a></h3></header><main><main class="container is-max-widescreen content section post-page pt-4 px-4"><div class="columns is-flex-desktop is-justify-content-center is-flex-direction-row-reverse"><div class="column is-3 is-hidden-mobile"><ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%B5%8B%E4%BA%88%E8%A7%92%E8%89%B2%E6%8A%80%E8%83%BD%E7%9A%84%E6%97%B6%E6%9C%BA"><span class="toc-text">赋予角色技能的时机</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E8%BE%93%E5%85%A5%E7%9A%84%E7%BB%91%E5%AE%9A"><span class="toc-text">输入的绑定</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#%E5%AF%BB%E6%89%BE%E6%8A%80%E8%83%BD%E5%AE%9E%E4%BE%8B%E7%84%B6%E5%90%8E%E6%BF%80%E6%B4%BB%E5%AE%83"><span class="toc-text">寻找技能实例然后激活它</span></a></li></ol></div><div class="column is-9"><header class="my-4"><a href="/tags/Unreal"><i class="tag post-item-tag">Unreal</i></a><a href="/tags/GAS"><i class="tag post-item-tag">GAS</i></a><a href="/tags/EnhancedInputSystem"><i class="tag post-item-tag">EnhancedInputSystem</i></a></header><h1 class="mt-0 mb-1 is-family-serif" id="postTitle">如何用 InputAction 来触发 GameplayAbility 的激活</h1><time class="has-text-grey" datetime="2024-04-07T01:49:27.000Z">2024-04-07</time><article class="mt-2 post-content"><p>GAS 作为管理技能和属性相关的灵活插件，使得开发制作角色扮演游戏、多人在线战术竞技游戏不再那么繁琐。另一方面，虚幻引擎将增强输入系统作为了默认输入组件，这不仅使得按下、按下并按住等常见功能逻辑作为了内置功能，还引入了上下文和优先级机制，使得我们可以将同一个按键在不同的上下文中发挥不同的效果。</p>
+<p>如果有机会通过增强输入系统中的输入动作映射到 GAS 的技能激活，那么就可以以很优雅的方式在不同上下文中激活不同的技能。例如鼠标左键在未装备武器时激活挥拳技能、装备枪械时变为开火技能；空格键可以先作为跳跃技能的触发按钮，后期又可以灵活地替换成翻滚技能的触发按钮。本博文将讨论以下几点内容：</p>
+<ul>
+<li>何时应该赋予角色技能，以及输入事件的绑定；</li>
+<li>如何保证所有技能任务都正确工作，尤其是等待输入 ID 按下和释放的技能任务；</li>
+<li>有些技能不需要按键来触发，怎么维护需要按键和不需要按键的技能。</li>
+</ul>
+<h2 id="赋予角色技能的时机"><a href="#赋予角色技能的时机" class="headerlink" title="赋予角色技能的时机"></a>赋予角色技能的时机</h2><p>根据个人过去游戏开发的经历，赋予角色技能的时机通常分为两种情况：1. 所有的技能在初始化技能系统组件后，一次性全部获得；2. 部分技能在初始化技能系统组件后获得，剩余技能在游戏期间中逐渐获得。通俗点儿说，前者更像是玩家已经化身为 “大师”，只是需要根据游戏的进程来明白自己并非 “凡夫俗子”；后者通常像是一件物品对玩家说：“想弄懂我就装备我吧”，例如只有装备枪械时才会得到开火和换子弹的技能，卸下装备时就失去了这两个技能。</p>
+<p>从开发的角度来说，一次性赋予的方式最为直接，但有着十分苛刻的技能激活的判断条件，要确保玩家激活了预期的技能。而部分赋予的方式间接引入了上下文的概念，只有满足特定条件和身处特定环境时才能得到激活技能的机会，在 GAS 框架下还有机会为技能提供 <code>SourceObject</code> 信息，从而在技能内部获取物品的信息，比如说开火技能可以找到武器网格中枪口 <code>Socket</code>、开火间隔的信息。但部分赋予的方式还可能会引发频繁地技能赋予和取消，比如游戏为玩家提供了 <code>Q</code> 键或鼠标滚轮来切换武器的机制，而包括在我内的一些玩家非常喜欢频繁切换它们，结果上是玩家频繁地获取和失去相同的技能。最后是部分赋予的方式还会使得 <code>InputID</code> 难以维护，该值在赋予技能的时候显式地提供，且通常是被前言中提到的技能任务有关，而我们更愿意使设计师可以用到的节点都能正常工作。</p>
+<p>从上面的描述中看来，一次性赋予的方式会使得生活更加容易一些，我们需要做好就是确保判断技能激活的条件，而虚幻引擎增强输入系统的上下文机制可以辅助我们解决这个问题。当玩家获得装备时（通常在 <code>BeginPlay</code>），将玩家的输入上下文中增加开火上下文，在卸下时去掉开火上下文（通常在 <code>EndPlay</code>）。在我的实现版本中，我将技能定义为了结构体，角色类中有存储该结构体的数组，然后在初始化技能系统函数中赋予玩家这些能力：</p>
+<pre><code class="hljs CPP"><span class="hljs-built_in">USTRUCT</span>(BlueprintType)
+<span class="hljs-keyword">struct</span> <span class="hljs-title class_">FBota_AbilityInputActionBinding</span>
+{
+	<span class="hljs-built_in">GENERATED_BODY</span>()
+
+	<span class="hljs-built_in">UPROPERTY</span>(EditAnywhere, BlueprintReadWrite)
+	TSubclassOf&lt;UGameplayAbility&gt; AbilityClass;
+
+	<span class="hljs-built_in">UPROPERTY</span>(EditAnywhere, BlueprintReadWrite)
+	TObjectPtr&lt;UInputAction&gt; InputAction;
+};
+
+<span class="hljs-comment">// ABota_Character 中有 TArray&lt;FBota_AbilityInputActionBinding&gt; AbilityBindings</span>
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ABota_Character::OnInitAbilityActorInfo</span><span class="hljs-params">()</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; ASC = <span class="hljs-built_in">GetBotaAbilitySystemComponent</span>();
+	<span class="hljs-keyword">if</span> (!ASC)
+		<span class="hljs-keyword">return</span>;
+
+	AActor* InOwner = <span class="hljs-literal">nullptr</span>, *InAvatar = <span class="hljs-literal">nullptr</span>;
+	<span class="hljs-built_in">GetAbilitySystemAvatarAndOwner</span>(InOwner, InAvatar);
+	ASC-&gt;<span class="hljs-built_in">InitAbilityActorInfo</span>(InOwner, InAvatar);
+
+	<span class="hljs-keyword">if</span> (!<span class="hljs-built_in">HasAuthority</span>())
+		<span class="hljs-keyword">return</span>;
+
+	<span class="hljs-keyword">for</span> (<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; Binding : AbilityBindings)
+	{
+		<span class="hljs-keyword">if</span>(Binding.AbilityClass)
+			ASC-&gt;<span class="hljs-built_in">GiveAbilityAndAssignInputID</span>(<span class="hljs-built_in">FGameplayAbilitySpec</span>(Binding.AbilityClass));
+	}
+
+}</code></pre>
+
+<p>在代码中可以看到，在服务器端使用了自定义的函数 <code>GiveAbilityAndAssignInputID</code>，它在 <code>GiveAbility</code> 的基础上还会为技能提供一个有效的 <code>InputID</code>。它的实现如下：</p>
+<pre><code class="hljs CPP"><span class="hljs-comment">// UBota_AbilitySystemComponent 中有 int32 ValidInputID = 0</span>
+<span class="hljs-function">FGameplayAbilitySpecHandle <span class="hljs-title">UBota_AbilitySystemComponent::GiveAbilityAndAssignInputID</span><span class="hljs-params">(<span class="hljs-type">const</span> FGameplayAbilitySpec&amp; AbilitySpec)</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-keyword">auto</span> TempAbilitySpec = AbilitySpec;
+	TempAbilitySpec.InputID = ValidInputID;
+	
+	<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; SpecHandle = <span class="hljs-built_in">GiveAbility</span>(TempAbilitySpec);
+	<span class="hljs-keyword">if</span> (SpecHandle.<span class="hljs-built_in">IsValid</span>())
+	{
+		ValidInputID++;
+	}
+	<span class="hljs-keyword">return</span> SpecHandle;
+}</code></pre>
+
+<h2 id="输入的绑定"><a href="#输入的绑定" class="headerlink" title="输入的绑定"></a>输入的绑定</h2><p>在上一节定义的结构体中，可以看到 <code>TObjectPtr&lt;UInputAction&gt; InputAction</code> 成员，这是设计师可以为技能映射按键的位置。这个 <code>InputAction</code> 可以加入到角色默认的 <code>InputMappingContext</code> 中，这样玩家一开始就可以通过按下对应的按键来激活技能，也可以加入到其他的 <code>InputMappingContext</code> 中然后动态地添加角色的输入系统中。在这种的实现机制中，<code>AbilityBindings</code> 在运行时保持值不变，因此可以很安全地遍历数组。下面的代码演示了如何将 <code>InputAction</code> 进行绑定并且在回调函数中找到对应的技能并激活：</p>
+<pre><code class="hljs CPP"><span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ABota_Character::SetupPlayerInputComponent</span><span class="hljs-params">(UInputComponent* PlayerInputComponent)</span></span>
+<span class="hljs-function"></span>{
+	Super::<span class="hljs-built_in">SetupPlayerInputComponent</span>(PlayerInputComponent);
+
+	<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; EIC = <span class="hljs-built_in">CastChecked</span>&lt;UEnhancedInputComponent&gt;(PlayerInputComponent);
+	<span class="hljs-keyword">if</span> (!EIC)
+		<span class="hljs-keyword">return</span>;
+
+	<span class="hljs-keyword">for</span> (<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; Binding : AbilityBindings)
+	{
+		<span class="hljs-keyword">if</span> (!Binding.InputAction)
+			<span class="hljs-keyword">continue</span>;
+
+		EIC-&gt;<span class="hljs-built_in">BindAction</span>(Binding.InputAction, ETriggerEvent::Started, <span class="hljs-keyword">this</span>, &amp;ThisClass::InputActionPressed, Binding.AbilityClass);
+		EIC-&gt;<span class="hljs-built_in">BindAction</span>(Binding.InputAction, ETriggerEvent::Completed, <span class="hljs-keyword">this</span>, &amp;ThisClass::InputActionReleased, Binding.AbilityClass);
+	}
+}
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ABota_Character::InputActionPressed</span><span class="hljs-params">(TSubclassOf&lt;UGameplayAbility&gt; InAbilityClass)</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-keyword">if</span> (!InAbilityClass)
+		<span class="hljs-keyword">return</span>;
+
+	<span class="hljs-keyword">if</span> (<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; ASC = <span class="hljs-built_in">GetBotaAbilitySystemComponent</span>())
+	{
+		ASC-&gt;<span class="hljs-built_in">FindAbilityByClassAndPressedInputID</span>(InAbilityClass);
+	}
+}
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">ABota_Character::InputActionReleased</span><span class="hljs-params">(TSubclassOf&lt;UGameplayAbility&gt; InAbilityClass)</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-keyword">if</span> (!InAbilityClass)
+		<span class="hljs-keyword">return</span>;
+
+	<span class="hljs-keyword">if</span> (<span class="hljs-type">const</span> <span class="hljs-keyword">auto</span>&amp; ASC = <span class="hljs-built_in">GetBotaAbilitySystemComponent</span>())
+	{
+		ASC-&gt;<span class="hljs-built_in">FindAbilityByClassAndRelesedInputID</span>(InAbilityClass);
+	}
+}
+</code></pre>
+
+<p>虚幻引擎的委托绑定函数允许我们额外传递函数形参，所以在上面的代码中在回调函数中将 <code>InputAction</code> 映射的 <code>AbilityClass</code> 传递了过来，然后调用了 <code>AbilitySystemComponent</code> 中自定义的函数 <code>FindAbilityByClassAndPressedInputID</code> 和 <code>FindAbilityByClassAndRelesedInputID</code> 来实现技能的触发。</p>
+<h2 id="寻找技能实例然后激活它"><a href="#寻找技能实例然后激活它" class="headerlink" title="寻找技能实例然后激活它"></a>寻找技能实例然后激活它</h2><p>在 <code>InputAction</code> 的回调函数中调用了 <code>AbilitySystemComponent</code> 的函数 <code>FindAbilityByClassAndPressedInputID</code> 和 <code>FindAbilityByClassAndRelesedInputID</code>，我采取的实现是结合了 <code>TryActivateAbilityByClass</code> 、<code>AbilityLocalInputPressed</code> 和 <code>AbilityLocalInputReleased</code>。因为这些函数会在调用时各自遍历一次可激活技能数组，所以修改为了只遍历一次：</p>
+<pre><code class="hljs CPP">
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">UBota_AbilitySystemComponent::FindAbilityByClassAndPressedInputID</span><span class="hljs-params">(TSubclassOf&lt;UGameplayAbility&gt; InAbilityToActivate)</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-built_in">ABILITYLIST_SCOPE_LOCK</span>();
+	<span class="hljs-type">const</span> UGameplayAbility* <span class="hljs-type">const</span> InAbilityCDO = InAbilityToActivate.<span class="hljs-built_in">GetDefaultObject</span>();
+	<span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span>&amp; Spec : ActivatableAbilities.Items)
+	{
+		<span class="hljs-keyword">if</span> (Spec.Ability == InAbilityCDO)
+		{
+			<span class="hljs-keyword">if</span> (Spec.Ability)
+			{
+				Spec.InputPressed = <span class="hljs-literal">true</span>;
+				<span class="hljs-keyword">if</span> (Spec.<span class="hljs-built_in">IsActive</span>())
+				{
+					<span class="hljs-keyword">if</span> (Spec.Ability-&gt;bReplicateInputDirectly &amp;&amp; <span class="hljs-built_in">IsOwnerActorAuthoritative</span>() == <span class="hljs-literal">false</span>)
+					{
+						<span class="hljs-built_in">ServerSetInputPressed</span>(Spec.Handle);
+					}
+
+					<span class="hljs-built_in">AbilitySpecInputPressed</span>(Spec);
+					<span class="hljs-built_in">InvokeReplicatedEvent</span>(EAbilityGenericReplicatedEvent::InputPressed, Spec.Handle, Spec.ActivationInfo.<span class="hljs-built_in">GetActivationPredictionKey</span>());
+				}
+				<span class="hljs-keyword">else</span>
+				{
+					<span class="hljs-built_in">TryActivateAbility</span>(Spec.Handle);
+				}
+			}
+		}
+	}
+}
+
+<span class="hljs-function"><span class="hljs-type">void</span> <span class="hljs-title">UBota_AbilitySystemComponent::FindAbilityByClassAndRelesedInputID</span><span class="hljs-params">(TSubclassOf&lt;UGameplayAbility&gt; InAbilityToActivate)</span></span>
+<span class="hljs-function"></span>{
+	<span class="hljs-built_in">ABILITYLIST_SCOPE_LOCK</span>();
+	<span class="hljs-type">const</span> UGameplayAbility* <span class="hljs-type">const</span> InAbilityCDO = InAbilityToActivate.<span class="hljs-built_in">GetDefaultObject</span>();
+	<span class="hljs-keyword">for</span> (<span class="hljs-keyword">auto</span>&amp; Spec : ActivatableAbilities.Items)
+	{
+		<span class="hljs-keyword">if</span> (Spec.Ability == InAbilityCDO)
+		{
+			Spec.InputPressed = <span class="hljs-literal">false</span>;
+			<span class="hljs-keyword">if</span> (Spec.Ability &amp;&amp; Spec.<span class="hljs-built_in">IsActive</span>())
+			{
+				<span class="hljs-keyword">if</span> (Spec.Ability-&gt;bReplicateInputDirectly &amp;&amp; <span class="hljs-built_in">IsOwnerActorAuthoritative</span>() == <span class="hljs-literal">false</span>)
+				{
+					<span class="hljs-built_in">ServerSetInputReleased</span>(Spec.Handle);
+				}
+
+				<span class="hljs-built_in">AbilitySpecInputReleased</span>(Spec);
+				<span class="hljs-built_in">InvokeReplicatedEvent</span>(EAbilityGenericReplicatedEvent::InputReleased, Spec.Handle, Spec.ActivationInfo.<span class="hljs-built_in">GetActivationPredictionKey</span>());
+			}
+		}
+	}
+}</code></pre></article><section class="jump-container is-flex is-justify-content-space-between my-6"><!-- em is empty placeholder--><em></em><a class="button is-default" href="/2024/03/24/Advanced-Locomotion-Animation-Logic/" title="进阶运动动画的实现"><span class="has-text-weight-semibold">下一页: 进阶运动动画的实现</span><i class="iconfont icon-next ml-2 has-text-grey"></i></a></section></div></div></main></main><footer class="is-flex is-flex-direction-column is-align-items-center is-flex-shrink-0 is-family-serif"><section class="sns-container"><!-- Github--><a title="github" target="_blank" rel="noopener nofollow" href="//github.com/yerha"><i class="iconfont icon-github"></i></a><!-- Ins--><!-- RSS--><!-- 知乎--><!-- 领英--><!-- 脸书--></section><p><span>Copyright ©</span><span> Yerha 2024</span></p><div class="is-flex is-justify-content-center is-flex-wrap-wrap"><p>Powered by Hexo &verbar;&nbsp;</p><p class="is-flex is-justify-content-center"><a title="Hexo theme author" target="_blank" rel="noopener" href="//github.com/haojen">Theme by Haojen&nbsp;</a></p><div style="margin-top: 2px"><a class="github-button" title="github-button" target="_blank" rel="noopener" href="https://github.com/haojen/hexo-theme-Claudia" data-color-scheme="no-preference: light; light: light; dark: dark;" data-show-count="true"></a></div></div><div><span></span></div></footer><script async defer src="https://buttons.github.io/buttons.js"></script><script src="/js/jquery-3.6.1.min.js"></script><script src="/js/jquery-fancybox.min.js"></script><script src="/js/img_zoom.js"></script><script src="/js/post.js"></script></body></html>
