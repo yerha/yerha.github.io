@@ -110,6 +110,9 @@
   text-decoration: none;
   color: #3273dc !important;
 }
+:root body time {
+  display: none;
+}
 :root body .tag.post-item-tag {
   margin-right: 5px;
   font-weight: bold;
